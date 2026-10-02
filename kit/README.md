@@ -1,0 +1,157 @@
+# dgx-spark-recipe-kit
+
+**To run a model you don't need this repo:** pick a recipe from the table below and clone it. Each recipe carries its
+own copy of this kit under `kit/`, and its `./setup.sh` runs it.
+
+The shared setup kit for the BHCC2025 DGX Spark recipe repos, so every recipe gives the same experience whatever model
+it sets up:
+
+```bash
+git clone https://github.com/BHCC2025/<recipe>.git && cd <recipe>
+./setup.sh            # nodes, SSH, dependencies, cabling, fabric IPs, cluster.env, image, network test, model
+./run.sh tpN
+```
+
+## Recipes using the kit
+
+| Recipe | Sparks | Engine | Single-stream decode, code (fastest setup) |
+|---|---|---|---|
+| [Qwen3.8-27B-DGX-Spark-TP2-TensorFold](https://github.com/BHCC2025/Qwen3.8-27B-DGX-Spark-TP2-TensorFold) | 2 | TensorFold | 98.9 tok/s (2 Sparks) |
+| [Gemma-4-31B-IT-DGX-Spark-TP1-TP2](https://github.com/BHCC2025/Gemma-4-31B-IT-DGX-Spark-TP1-TP2) | 1–2 | vLLM | 40.6 tok/s (2 Sparks) |
+| [Qwen3.8-Flash-Next-DGX-Spark-TP1-TP3](https://github.com/BHCC2025/Qwen3.8-Flash-Next-DGX-Spark-TP1-TP3) (archived) | 1–3 | vLLM | 62.8 tok/s (3 Sparks) |
+
+Every number is benched on our own Sparks with the recipe's `bench/bench.sh`; see each recipe's `bench/results/`.
+
+## What `setup.sh` does
+
+| Step | What it does | Changes anything? |
+|---|---|---|
+| 1. Nodes | Asks how many Sparks and their SSH names; checks passwordless SSH | offers `ssh-copy-id` |
+| 2. Inspect | Runs `lib/probe.py` on every node: OS, GPU, memory, tools, Docker, disk, LAN, every RDMA port | no |
+| 3. Dependencies | Docker without sudo, rsync, perftest, the Hugging Face CLI; test-downloads one small file of the model (a gated model gets its licence link and a login prompt) | offers `apt install`, docker group, a local venv for `hf` |
+| 4. Cabling | Works out which port is cabled to which node (IPv6 all-nodes ping, so no IPv4 is needed yet), checks the shape (1 cable / triangle), checks IPs and the RoCE v2 GID, pings every cable | offers to assign fabric IPs (NetworkManager connection or netplan, only on those ports) |
+| 5. cluster.env | Picks the model directory (checks free space on every node) and writes the detected values into `cluster.env` | shows a diff, asks |
+| 6. Image | Pulls the pinned image on every node, or for an engine with no published image (TensorFold) builds it once on the head from the recipe's `docker/Dockerfile` and copies it to the workers (`docker save \| docker load`); checks the GPU is visible inside it | offers `docker pull` / `docker build` / the copy |
+| 7. Network test | `ib_write_bw` on every cable, then an NCCL all-reduce **inside the recipe's image with the recipe's NCCL settings** | no (runs a short-lived container) |
+| 8. Model | `hf download` at the pinned revision on the head, `rsync` to the workers; the same for a draft model when `recipe.yaml` has `model.draft` + `setup.draft_dir`; then the recipe's prepare commands | asks first |
+
+- `--check` changes nothing and downloads nothing (the network test still runs, in short-lived containers). It
+  uses the nodes in `cluster.env` if there is one, and writes `.setup/report.txt`, which is what to attach to an issue.
+- `--nodes "spark1 spark2"` names the nodes (head first) instead of asking; `--yes` accepts every default;
+  `--skip-download` and `--skip-net-test` skip those steps. You can re-run setup at any time.
+
+## How we know it works
+
+- **Every push** runs the hardware-free tests in CI ([tests/](tests/), `bash tests/run.sh`): the cabling logic on
+  synthetic 2- and 3-node clusters (including a missing cable, a miswired triangle, a missing RoCE v2 GID and IPv6
+  turned off), `new-recipe.sh` for every TP range (no leftover placeholders or markers, every link resolves, `DRY_RUN`
+  prints the right commands, for vLLM and TensorFold), `cluster.env` precedence, the benchmark's model check, and
+  shellcheck. The vLLM output of `new-recipe.sh` 0.5.0 is byte-identical to 0.4.0's for every TP range.
+- **On real hardware** (three DGX Sparks, DGX OS 7, one cable and a triangle): a brand-new account with no docker
+  group, no SSH key, no Hugging Face CLI and a cable with no IP addresses. `setup.sh` added the docker group,
+  installed `hf`, found the cable and assigned its IPs, then measured RDMA at 111.6 Gb/s and NCCL at 11.9 GB/s; the
+  Gemma recipe then served TP2 and passed its smoke test. `--check` is also exercised on 1, 2 and 3 nodes.
+- **TensorFold path, on real hardware** (2026-10-02): `setup.sh` built the TensorFold image from a generated
+  recipe's `docker/Dockerfile` and checked the GPU inside it; `setup.sh --check` on two Sparks ran RDMA (111.6 Gb/s)
+  and the NCCL all-reduce (12.3 GB/s) inside that image; the Qwen3.8-27B TP2 recipe then served through
+  `./run.sh tp2` and passed `CONCURRENT=1,8 bench/bench.sh` (48 / 48 concurrent replies equal to the request alone).
+  The image copy to a worker (`docker save | docker load`) was run by hand with the same command, not yet through
+  `setup.sh`.
+- **Known issue:** `setup.sh` takes `NODES[0]` to be the machine it runs on without checking; run on one Spark with
+  `--nodes` naming other machines, it reports a misleading cabling FAIL. Run it on the head, listed first.
+- **Not tested yet:** other DGX OS releases, machines without NetworkManager (the netplan path), a switch instead of
+  direct cables, more than three nodes, and a full first model download on a new account (the download test in
+  step 3 is tested with an ungated, a gated and a missing repo). If you try one of these, please open an issue with
+  your `.setup/report.txt`, whether it worked or not.
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `setup.sh` | the entry point (a recipe's `./setup.sh` just runs `kit/setup.sh`) |
+| `lib/probe.py` | per-node facts as JSON, stdlib only, read-only |
+| `lib/topology.py` | probes → cables, validation, IP plan, `cluster.env` values |
+| `lib/nccl.sh` | NCCL network profiles `pair` (1 cable) and `triangle` (3 cables). Recipes source this, so the setup test and the real run use identical settings |
+| `lib/nccl_check.py` | torch.distributed all-reduce with a correctness check and bus bandwidth (sent inside the `docker run` command, so nothing has to be on the workers) |
+| `lib/netconfig.sh` | persistent static IP on one CX7 port |
+| `lib/recipe.py` | reads `recipe.yaml` for setup |
+| `lib/new_recipe.py` | the generator behind `new-recipe.sh` |
+| `lib/cluster_env.sh` | `load_cluster_env`: a recipe loads `cluster.env` with it, so a value set in the environment wins for one run (`PORT=8001 ./run.sh tp1`) |
+| `bench/` | the shared benchmark (`bench.sh` + its Python helpers) and smoke test. `CONCURRENT=1,8` adds a multi-user test (TensorFold recipes: the engine's own `tools/bench_concurrent.py`, run inside the recipe's container, summarised by `concurrent-summary.py`). A recipe's `bench/bench.sh` and `scripts/smoke-test.sh` just run these, so every recipe is measured the same way. `bench.sh` refuses to file results under a recipe unless the server is serving that recipe's model; `BENCH_OUT=<dir>` benches anything else. `SMOKE_NO_THINK=1` sends the smoke test's direct-answer checks (arithmetic, fact, code) with thinking off, for models that think past their token budgets (a recipe sets it in its `scripts/smoke-test.sh` wrapper) |
+| `new-recipe.sh` | creates a new recipe repo from `template/` (below) |
+| `template/` | the complete starting layout of a recipe repo, with `{{...}}` placeholders that `new-recipe.sh` fills in. `template/engines/<engine>/` is laid over it for an engine other than vLLM (today: `tensorfold`) |
+| `tests/` | hardware-free tests, run by CI on every push: `bash tests/run.sh` |
+
+## Starting a new recipe
+
+```bash
+git clone https://github.com/BHCC2025/dgx-spark-recipe-kit.git
+dgx-spark-recipe-kit/new-recipe.sh --model Gemma-4-31B-IT --hf nvidia/Gemma-4-31B-IT-NVFP4 --tp 1-2
+```
+
+That creates `Gemma-4-31B-IT-DGX-Spark-TP1-TP2/` with the full layout below, only the TP sizes you asked for, and
+working launchers for them (TP1 on one Spark, TP2 over one cable, TP3 over a triangle). It prints the git commands
+that add the kit as a subtree, and every `TODO` left: the model's vLLM flags in `lib/common.sh`, the revision and
+image digest in `recipe.yaml`, and the README text. Checked against the published recipes: generated with
+`--slug gemma4-31b --served gemma-4-31b-it` and Gemma-4-31B-IT's model flags filled in, the template's TP1 and TP2
+launchers pass `docker run` exactly the same arguments as that recipe (draft model off; only their order differs),
+and its TP3 uses exactly the same network wiring as the Qwen3.8-Flash-Next TP3.
+
+For a [TensorFold](https://github.com/ashhart/TensorFold) recipe (TP1 or TP2):
+
+```bash
+dgx-spark-recipe-kit/new-recipe.sh --engine tensorfold --model Qwen3.8-27B --hf TensorFold/Qwen3.8-27B-MLX-4bit \
+    --draft z-lab/Qwen3.8-27B-DFlash2 --tp 2
+```
+
+That creates `Qwen3.8-27B-DGX-Spark-TP2-TensorFold/` (the engine goes in the name as a suffix). TensorFold publishes no
+image, so the recipe gets a `docker/Dockerfile` that installs TensorFold from its upstream repository at a pinned
+release commit, unmodified, into NVIDIA's PyTorch container; `./setup.sh` builds it. The launchers run
+`tensorfold serve` with the kit's pair NCCL profile, the endpoint on rank 0 only, and the same `PARALLEL`, `CONTEXT`,
+`KV_DTYPE` and drafting settings on both ranks. Upstream's code is never copied into a recipe: changes to it go
+upstream as pull requests, and a recipe that needs one before it is merged ships it as a small patch with PROVENANCE.
+
+## Recipe repo standard
+
+Every recipe repo looks like this:
+
+```
+<Model>-DGX-Spark-TP<min>-TP<max>[-<Engine>]/   name always carries the TP range (search); -TP<n> for a single size;
+                       an engine other than vLLM as a suffix (-TensorFold)
+  README.md            sections, in order: quick-glance table · requirements · quick start (setup.sh, per node count)
+                       · settings · how it works · benchmarks · troubleshooting · credits · license
+  recipe.yaml          metadata + the `setup:` block the kit reads (template/recipe.yaml)
+  cluster.env.example  every key the recipe reads; setup.sh fills in the detected ones
+  setup.sh             exec kit/setup.sh "$@"
+  run.sh               tpN | stop | status | logs; DRY_RUN=1 prints the docker commands
+  lib/common.sh        shared launcher pieces; sources kit/lib/nccl.sh for the network
+  recipes/tpN.sh       one launcher per TP size
+  docker/Dockerfile    only for an engine with no published image: installs it from upstream at a pinned commit
+  patches/<name>/      each with PROVENANCE.md (source, commit, author, what changed, sha256)
+  scripts/             smoke-test.sh (runs the kit's) + recipe-specific helpers (prepare steps)
+  .github/             issue template asking for the setup report
+  bench/               bench.sh (runs the kit's) + results/<date>-<tp>.md and raw logs
+  docs/                networking, troubleshooting, and one page per notable feature (padding, draft model, ...)
+  kit/                 this repo (git subtree)
+  LICENSE NOTICE CHANGELOG.md
+```
+
+Rules:
+- **Every TP size a recipe ships gets benched on our own Sparks** with `bench/bench.sh` before `recipe.yaml` marks
+  it `verified: true`. Numbers taken from upstream are labelled as upstream figures until then.
+- Pin the image (tag and digest; for a built image, the engine commit and the base image digest) and the model revision.
+- Credit upstream work in NOTICE and PROVENANCE.md. Don't copy code across incompatible licences.
+- No hardcoded hostnames, IPs or home paths anywhere outside `cluster.env`.
+- Publish private first; flip to public after review.
+
+## Updating the kit inside a recipe repo
+
+Recipes vendor a tagged release, never `main`:
+
+```bash
+git subtree pull --prefix kit https://github.com/BHCC2025/dgx-spark-recipe-kit.git vX.Y.Z --squash
+```
+
+## License
+
+Apache-2.0.
