@@ -1,0 +1,389 @@
+{
+ "label": "tp1",
+ "tokens": 256,
+ "mixed": false,
+ "cells": [
+  {
+   "prompt": "code",
+   "temperature": 0.0,
+   "streams": 1,
+   "failed": 0,
+   "unmeasured": 0,
+   "aggregate_tps": 214.4,
+   "per_stream_tps": 214.4,
+   "ttft_s_max": 0.02,
+   "alone": {
+    "equal": 3,
+    "unequal": 0,
+    "failed": 0
+   },
+   "reps": [
+    {
+     "failed": 0,
+     "unmeasured": 0,
+     "aggregate_tps": 214.4055906147298,
+     "per_stream_tps": [
+      214.4
+     ],
+     "ttft_s": [
+      0.02
+     ],
+     "errors": [],
+     "equal_alone": [
+      true
+     ]
+    },
+    {
+     "failed": 0,
+     "unmeasured": 0,
+     "aggregate_tps": 217.17488226482436,
+     "per_stream_tps": [
+      217.2
+     ],
+     "ttft_s": [
+      0.02
+     ],
+     "errors": [],
+     "equal_alone": [
+      true
+     ]
+    },
+    {
+     "failed": 0,
+     "unmeasured": 0,
+     "aggregate_tps": 214.02591937540777,
+     "per_stream_tps": [
+      214.0
+     ],
+     "ttft_s": [
+      0.02
+     ],
+     "errors": [],
+     "equal_alone": [
+      true
+     ]
+    }
+   ]
+  },
+  {
+   "prompt": "code",
+   "temperature": 0.0,
+   "streams": 8,
+   "failed": 0,
+   "unmeasured": 0,
+   "aggregate_tps": 558.5,
+   "per_stream_tps": 75.8,
+   "ttft_s_max": 0.54,
+   "steady_tps": 600.0,
+   "alone": {
+    "equal": 24,
+    "unequal": 0,
+    "failed": 0
+   },
+   "reps": [
+    {
+     "failed": 0,
+     "unmeasured": 0,
+     "aggregate_tps": 512.331491253308,
+     "steady_tps": 564.775080182108,
+     "per_stream_tps": [
+      72.5,
+      68.9,
+      73.6,
+      71.6,
+      69.3,
+      72.0,
+      71.4,
+      68.8
+     ],
+     "ttft_s": [
+      0.47,
+      0.07,
+      0.54,
+      0.35,
+      0.03,
+      0.41,
+      0.29,
+      0.11
+     ],
+     "errors": [],
+     "equal_alone": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    },
+    {
+     "failed": 0,
+     "unmeasured": 0,
+     "aggregate_tps": 558.49559943903,
+     "steady_tps": 600.0407385130494,
+     "per_stream_tps": [
+      75.6,
+      75.8,
+      76.2,
+      77.2,
+      75.6,
+      76.7,
+      76.2,
+      75.8
+     ],
+     "ttft_s": [
+      0.15,
+      0.11,
+      0.31,
+      0.37,
+      0.2,
+      0.03,
+      0.06,
+      0.26
+     ],
+     "errors": [],
+     "equal_alone": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    },
+    {
+     "failed": 0,
+     "unmeasured": 0,
+     "aggregate_tps": 561.4486514869562,
+     "steady_tps": 602.1650239932012,
+     "per_stream_tps": [
+      76.2,
+      76.3,
+      76.7,
+      75.9,
+      77.7,
+      75.9,
+      76.0,
+      76.7
+     ],
+     "ttft_s": [
+      0.07,
+      0.26,
+      0.32,
+      0.11,
+      0.38,
+      0.15,
+      0.2,
+      0.03
+     ],
+     "errors": [],
+     "equal_alone": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ]
+  },
+  {
+   "prompt": "chat",
+   "temperature": 0.0,
+   "streams": 1,
+   "failed": 0,
+   "unmeasured": 0,
+   "aggregate_tps": 164.2,
+   "per_stream_tps": 164.2,
+   "ttft_s_max": 0.02,
+   "alone": {
+    "equal": 3,
+    "unequal": 0,
+    "failed": 0
+   },
+   "reps": [
+    {
+     "failed": 0,
+     "unmeasured": 0,
+     "aggregate_tps": 164.2104532853572,
+     "per_stream_tps": [
+      164.2
+     ],
+     "ttft_s": [
+      0.02
+     ],
+     "errors": [],
+     "equal_alone": [
+      true
+     ]
+    },
+    {
+     "failed": 0,
+     "unmeasured": 0,
+     "aggregate_tps": 164.18351737623115,
+     "per_stream_tps": [
+      164.2
+     ],
+     "ttft_s": [
+      0.02
+     ],
+     "errors": [],
+     "equal_alone": [
+      true
+     ]
+    },
+    {
+     "failed": 0,
+     "unmeasured": 0,
+     "aggregate_tps": 164.37215418896105,
+     "per_stream_tps": [
+      164.4
+     ],
+     "ttft_s": [
+      0.02
+     ],
+     "errors": [],
+     "equal_alone": [
+      true
+     ]
+    }
+   ]
+  },
+  {
+   "prompt": "chat",
+   "temperature": 0.0,
+   "streams": 8,
+   "failed": 0,
+   "unmeasured": 0,
+   "aggregate_tps": 471.7,
+   "per_stream_tps": 62.4,
+   "ttft_s_max": 0.39,
+   "steady_tps": 494.1,
+   "alone": {
+    "equal": 24,
+    "unequal": 0,
+    "failed": 0
+   },
+   "reps": [
+    {
+     "failed": 0,
+     "unmeasured": 0,
+     "aggregate_tps": 427.744932443717,
+     "steady_tps": 442.6081166820854,
+     "per_stream_tps": [
+      56.0,
+      55.9,
+      56.2,
+      56.4,
+      56.8,
+      57.9,
+      57.3,
+      55.9
+     ],
+     "ttft_s": [
+      0.11,
+      0.07,
+      0.16,
+      0.21,
+      0.27,
+      0.39,
+      0.33,
+      0.03
+     ],
+     "errors": [],
+     "equal_alone": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    },
+    {
+     "failed": 0,
+     "unmeasured": 0,
+     "aggregate_tps": 475.1864864535984,
+     "steady_tps": 500.49053541356153,
+     "per_stream_tps": [
+      62.5,
+      62.5,
+      62.7,
+      63.5,
+      63.1,
+      64.8,
+      64.1,
+      62.6
+     ],
+     "ttft_s": [
+      0.03,
+      0.07,
+      0.16,
+      0.27,
+      0.21,
+      0.38,
+      0.32,
+      0.11
+     ],
+     "errors": [],
+     "equal_alone": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    },
+    {
+     "failed": 0,
+     "unmeasured": 0,
+     "aggregate_tps": 471.6629055713539,
+     "steady_tps": 494.1241134687731,
+     "per_stream_tps": [
+      62.6,
+      63.6,
+      62.3,
+      63.1,
+      62.1,
+      62.0,
+      64.3,
+      62.1
+     ],
+     "ttft_s": [
+      0.21,
+      0.33,
+      0.16,
+      0.27,
+      0.11,
+      0.07,
+      0.39,
+      0.03
+     ],
+     "errors": [],
+     "equal_alone": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ]
+  }
+ ]
+}

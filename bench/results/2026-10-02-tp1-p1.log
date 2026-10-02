@@ -1,0 +1,51 @@
+=== bench tp1-p1 2026-10-02T16:33:34-05:00 http://127.0.0.1:8000/v1
+model=qwen3.6-35b-a3b max_model_len=0 host=spark1
+               total        used        free      shared  buff/cache   available
+Mem:             121          38          84           0           1          82
+--- short code, 3 runs
+model=qwen3.6-35b-a3b base=http://127.0.0.1:8000/v1 long_k=0 runs=3 max_tokens=512 no_think=True code=True
+run1: prompt=53 gen=512 ttft=3.39s prefill=16 tok/s decode=73.1 tok/s total=10.4s
+run2: prompt=53 gen=512 ttft=0.51s prefill=103 tok/s decode=159.1 tok/s total=3.7s
+run3: prompt=53 gen=512 ttft=0.04s prefill=1321 tok/s decode=159.7 tok/s total=3.2s
+MEDIAN decode=159.1 tok/s  prefill=103 tok/s
+--- short prose, 3 runs
+model=qwen3.6-35b-a3b base=http://127.0.0.1:8000/v1 long_k=0 runs=3 max_tokens=512 no_think=True code=False
+run1: prompt=29 gen=512 ttft=0.17s prefill=166 tok/s decode=132.3 tok/s total=4.0s
+run2: prompt=29 gen=512 ttft=0.02s prefill=1391 tok/s decode=132.6 tok/s total=3.9s
+run3: prompt=29 gen=512 ttft=0.02s prefill=1396 tok/s decode=133.0 tok/s total=3.9s
+MEDIAN decode=132.6 tok/s  prefill=1391 tok/s
+--- long ~9K prompt, 2 runs
+model=qwen3.6-35b-a3b base=http://127.0.0.1:8000/v1 long_k=12 runs=2 max_tokens=512 no_think=True code=False
+run1: prompt=9297 gen=71 ttft=1.60s prefill=5822 tok/s decode=112.4 tok/s total=2.2s
+run2: prompt=9297 gen=71 ttft=0.07s prefill=141871 tok/s decode=134.0 tok/s total=0.6s
+MEDIAN decode=123.2 tok/s  prefill=73846 tok/s
+--- cold prefill 8K x3
+cold prefill: qwen3.6-35b-a3b @ http://127.0.0.1:8000/v1  target ~8K tokens, 3 runs, unique prompt each time
+  run1: prompt=7315 ttft=1.06s prefill=6896 tok/s total=1.12s
+  run2: prompt=7373 ttft=1.06s prefill=6941 tok/s total=1.09s
+  run3: prompt=7413 ttft=1.04s prefill=7099 tok/s total=1.07s
+MEDIAN cold prefill = 6941 tok/s
+--- cold prefill 28K x2
+cold prefill: qwen3.6-35b-a3b @ http://127.0.0.1:8000/v1  target ~28K tokens, 2 runs, unique prompt each time
+  run1: prompt=25814 ttft=4.17s prefill=6194 tok/s total=4.29s
+  run2: prompt=25589 ttft=4.14s prefill=6180 tok/s total=4.18s
+MEDIAN cold prefill = 6187 tok/s
+--- smoke test
+PASS  arithmetic
+PASS  fact
+PASS  code
+PASS  thinking
+PASS  tool call
+model qwen3.6-35b-a3b: ALL PASS
+--- concurrent users 1,8: TensorFold /opt/tensorfold/tools/bench_concurrent.py in tf_qwen36_35b (code + chat prompts, greedy, 256 tokens, 3 reps, --alone)
+{"label": "tp1-p1", "prompt": "code", "temperature": 0.0, "streams": 1, "failed": 0, "unmeasured": 0, "aggregate_tps": 211.7, "per_stream_tps": 211.7, "ttft_s_max": 0.04, "alone": {"equal": 3, "unequal": 0, "failed": 0}}
+{"label": "tp1-p1", "prompt": "code", "temperature": 0.0, "streams": 8, "failed": 0, "unmeasured": 0, "aggregate_tps": 207.9, "per_stream_tps": 212.1, "ttft_s_max": 8.67, "alone": {"equal": 24, "unequal": 0, "failed": 0}}
+{"label": "tp1-p1", "prompt": "chat", "temperature": 0.0, "streams": 1, "failed": 0, "unmeasured": 0, "aggregate_tps": 159.9, "per_stream_tps": 159.9, "ttft_s_max": 0.04, "alone": {"equal": 3, "unequal": 0, "failed": 0}}
+{"label": "tp1-p1", "prompt": "chat", "temperature": 0.0, "streams": 8, "failed": 0, "unmeasured": 0, "aggregate_tps": 159.4, "per_stream_tps": 162.3, "ttft_s_max": 11.42, "alone": {"equal": 24, "unequal": 0, "failed": 0}}
+code  T=0.0 1 user(s):   211.7 tok/s total,  211.7 per user, TTFT max 0.04 s, equal to the request alone 3/3
+code  T=0.0 8 user(s):   207.9 tok/s total,  212.1 per user, TTFT max 8.67 s, equal to the request alone 24/24
+chat  T=0.0 1 user(s):   159.9 tok/s total,  159.9 per user, TTFT max 0.04 s, equal to the request alone 3/3
+chat  T=0.0 8 user(s):   159.4 tok/s total,  162.3 per user, TTFT max 11.42 s, equal to the request alone 24/24
+CONCURRENT ALL EQUAL
+raw: bench/results/2026-10-02-tp1-p1-concurrent.json
+=== done 2026-10-02T16:35:47-05:00 -> bench/results/2026-10-02-tp1-p1.log

@@ -1,0 +1,56 @@
+# recipe.yaml — machine-readable summary. Same schema in every BHCC2025 DGX Spark recipe repo.
+schema: 1
+name: Qwen3.6-35B-A3B-DGX-Spark-TP1-TensorFold
+model:
+  hf_repo: TensorFold/Qwen3.6-35B-A3B-MLX-4bit-MTP
+  # formerly Vontra/Qwen3.6-35B-A3B-MLX-4bit-MTP (the old id redirects here); weights unchanged since 81169a9b
+  revision: f84b054c5677b6e59bdb969ae61915b0983d68bb
+  size_on_disk_gb: 21
+  quantization: MLX affine 4-bit, groups of 64 (routers and shared-expert gate 8-bit); MTP layer in mtp-4bit.safetensors
+engine:
+  name: tensorfold
+  version: v0.6.2
+  source: https://github.com/ashhart/TensorFold
+  commit: 56e2e3ec55bc0ae1d7d5158c4fa2c79a3567ab21
+  # TensorFold publishes no image: ./setup.sh builds `image` from `build` (upstream TensorFold at `commit`, unmodified)
+  image: dgx-spark-tensorfold:v0.6.2
+  build: docker/Dockerfile
+  base_image: nvcr.io/nvidia/pytorch:26.07-py3
+  base_image_digest: sha256:2140e699b3beaf7f96a0081fd9c9406bc3832b435cdb60dfa2d261f7d2f34a1c
+hardware: NVIDIA DGX Spark (GB10, 128 GB or 64 GB unified memory)
+api: {port: 8000, served_model_name: qwen3.6-35b-a3b, openai_compatible: true}
+
+setup:                       # read by kit/setup.sh
+  # model_dir: the default; the same path on every node
+  model_dir: /var/tmp/models/Qwen3.6-35B-A3B-MLX-4bit-MTP
+  disk_gb: 25                # the model (the image needs ~25 GB more under Docker's root)
+  # tp_sizes: the node counts this recipe supports (one recipes/tpN.sh each)
+  tp_sizes: [1]
+  first_run: {1: ./run.sh tp1}
+  smoke_test: scripts/smoke-test.sh
+
+# verified: true only after bench/bench.sh ran on our own Sparks with this repo's launcher.
+recipes:
+  - id: tp1
+    nodes: 1
+    command: ./run.sh tp1
+    mem_gb: 128              # MEM_GB=auto picks this profile on a 128 GB Spark
+    context: auto            # TensorFold sized it to 237329-262144 tokens per stream at parallel 8
+    parallel: 8
+    decode_tok_s: {code: 160.5, prose: 133.3, source: bench/results/2026-10-02-tp1.md}
+    concurrent_8_users_tok_s: {code: 558.5, chat: 471.7}   # greedy, total; 54/54 replies equal to the request alone
+    prefill_cold_8k_tok_s: 7112
+    verified: true
+    verified_date: 2026-10-02
+  - id: tp1-64gb
+    nodes: 1
+    command: ./run.sh tp1    # MEM_GB=auto picks this profile below 80 GiB of memory; MEM_GB=64 forces it
+    mem_gb: 64
+    context: 65536
+    parallel: 4
+    decode_tok_s: {code: 159.9, prose: 132.8, source: bench/results/2026-10-02-tp1.md}
+    concurrent_8_users_tok_s: {code: 414.6, chat: 344.7}   # 4 decoded at a time; 54/54 equal to the request alone
+    prefill_cold_8k_tok_s: 7055
+    memory: {startup_estimate_gib: 34.7, measured_peak_gib: 38.1}   # 4 streams filled to ~63K tokens
+    verified: true           # simulated: a 128 GB Spark with all but 53.5 GiB locked away
+    verified_date: 2026-10-02
